@@ -20,237 +20,237 @@ foldersub="$folder/$sub"
 [ -d "$foldersub" ] || mkdir -p "$foldersub"
 
 dmenu_ask() {
-	record_what=$(printf "monitor\\nworkspace\\nselection" | $dmenu "record what:")
-	dmenu_verify "$record_what" "monitor workspace selection"
+    record_what=$(printf "monitor\\nworkspace\\nselection" | $dmenu "record what:")
+    dmenu_verify "$record_what" "monitor workspace selection"
 
-	if [ "$record_what" == "workspace" ]; then
-		split_monitors=$(printf "yes\\nno" | $dmenu "split monitors:")
-		dmenu_verify "$split_monitors" "yes no"
-	fi
-	
-	record_mic=$(printf "yes\\nno" | $dmenu "record mic:")
-	dmenu_verify "$record_mic" "yes no"
+    if [ "$record_what" == "workspace" ]; then
+        split_monitors=$(printf "yes\\nno" | $dmenu "split monitors:")
+        dmenu_verify "$split_monitors" "yes no"
+    fi
+    
+    record_mic=$(printf "yes\\nno" | $dmenu "record mic:")
+    dmenu_verify "$record_mic" "yes no"
 
-	record_desktop=$(printf "yes\\nno" | $dmenu "record desktop audio:")
-	dmenu_verify "$record_desktop" "yes no"
+    record_desktop=$(printf "yes\\nno" | $dmenu "record desktop audio:")
+    dmenu_verify "$record_desktop" "yes no"
 
-	if [ "$record_mic" == "yes" ] && [ "$record_desktop" == "yes" ]; then
-		split_audio_tracks=$(printf "yes\\nno" | $dmenu "split audio tracks:")
-		dmenu_verify "$split_audio_tracks" "yes no"
-	fi
+    if [ "$record_mic" == "yes" ] && [ "$record_desktop" == "yes" ]; then
+        split_audio_tracks=$(printf "yes\\nno" | $dmenu "split audio tracks:")
+        dmenu_verify "$split_audio_tracks" "yes no"
+    fi
 }
 
 dmenu_verify() {
-	local term="$1"
+    local term="$1"
     local valid_terms="$2"
 
-	# very simple normalizing
-	local normalized_terms=$(echo "$valid_terms" | tr ' ' '\n')
+    # very simple normalizing
+    local normalized_terms=$(echo "$valid_terms" | tr ' ' '\n')
 
     # check if the selection is valid
     if ! echo "$normalized_terms" | grep -Fxq "$term"; then
         notify-send "dmenu-record: Error" "No valid selection made. Exiting..."
-		echo "No valid selection made. Exiting..."
+        echo "No valid selection made. Exiting..."
         exit 1
     fi
 }
 
 print_size() { # https://gist.github.com/naelstrof/f9b74b5221cdc324c0911c89a47b8d97
-	case "$record_what" in
-		"monitor")
-			MONITORS=$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*')
-			# Get the location of the mouse
-			XMOUSE=$(xdotool getmouselocation | awk -F "[: ]" '{print $2}')
-			YMOUSE=$(xdotool getmouselocation | awk -F "[: ]" '{print $4}')
+    case "$record_what" in
+        "monitor")
+            MONITORS=$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*')
+            # Get the location of the mouse
+            XMOUSE=$(xdotool getmouselocation | awk -F "[: ]" '{print $2}')
+            YMOUSE=$(xdotool getmouselocation | awk -F "[: ]" '{print $4}')
 
-			for mon in ${MONITORS}; do
-				# Parse the geometry of the monitor
-				MONW=$(echo ${mon} | awk -F "[x+]" '{print $1}')
-				MONH=$(echo ${mon} | awk -F "[x+]" '{print $2}')
-				MONX=$(echo ${mon} | awk -F "[x+]" '{print $3}')
-				MONY=$(echo ${mon} | awk -F "[x+]" '{print $4}')
-				# Use a simple collision check
-				if (( ${XMOUSE} >= ${MONX} )); then
-					if (( ${XMOUSE} <= ${MONX}+${MONW} )); then
-						if (( ${YMOUSE} >= ${MONY} )); then
-							if (( ${YMOUSE} <= ${MONY}+${MONH} )); then
-								# We have found our monitor!
-								echo "-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
-								return 0
-							fi
-						fi
-					fi
-				fi
-			done
-			exit 1
-		;;
+            for mon in ${MONITORS}; do
+                # Parse the geometry of the monitor
+                MONW=$(echo ${mon} | awk -F "[x+]" '{print $1}')
+                MONH=$(echo ${mon} | awk -F "[x+]" '{print $2}')
+                MONX=$(echo ${mon} | awk -F "[x+]" '{print $3}')
+                MONY=$(echo ${mon} | awk -F "[x+]" '{print $4}')
+                # Use a simple collision check
+                if (( ${XMOUSE} >= ${MONX} )); then
+                    if (( ${XMOUSE} <= ${MONX}+${MONW} )); then
+                        if (( ${YMOUSE} >= ${MONY} )); then
+                            if (( ${YMOUSE} <= ${MONY}+${MONH} )); then
+                                # We have found our monitor!
+                                echo "-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
+                                return 0
+                            fi
+                        fi
+                    fi
+                fi
+            done
+            exit 1
+        ;;
 
-		"workspace")
-			if [ "$split_monitors" == "no" ]; then
-				echo "-f x11grab -thread_queue_size 1024 -s "$(xrandr | grep -oP '(?<=current ).*(?=,)' | tr -d ' ')" -i "$DISPLAY" "
-			else
-				local output=""
+        "workspace")
+            if [ "$split_monitors" == "no" ]; then
+                echo "-f x11grab -thread_queue_size 1024 -s "$(xrandr | grep -oP '(?<=current ).*(?=,)' | tr -d ' ')" -i "$DISPLAY" "
+            else
+                local output=""
 
-				MONITORS=$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*')
+                MONITORS=$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*')
 
-				for mon in ${MONITORS}; do
-					# Parse the geometry of the monitor
-					MONW=$(echo ${mon} | awk -F "[x+]" '{print $1}')
-					MONH=$(echo ${mon} | awk -F "[x+]" '{print $2}')
-					MONX=$(echo ${mon} | awk -F "[x+]" '{print $3}')
-					MONY=$(echo ${mon} | awk -F "[x+]" '{print $4}')
-					
-					# Append monitors to the output
-					output+="-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
-				done
+                for mon in ${MONITORS}; do
+                    # Parse the geometry of the monitor
+                    MONW=$(echo ${mon} | awk -F "[x+]" '{print $1}')
+                    MONH=$(echo ${mon} | awk -F "[x+]" '{print $2}')
+                    MONX=$(echo ${mon} | awk -F "[x+]" '{print $3}')
+                    MONY=$(echo ${mon} | awk -F "[x+]" '{print $4}')
+                    
+                    # Append monitors to the output
+                    output+="-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
+                done
 
-				echo -e "$output"
-			fi
-		;;
+                echo -e "$output"
+            fi
+        ;;
 
-		"selection")
-			while true; do # so slop fails some times on kde so i just force it until it spits out a region or the user aborts
-				local slop=$(slop --highlight --color 0.3,0.4,0.6,0.4 -f "%x %y %w %h" 2>&1)  # Capture both stdout and stderr
-				if [[ "$slop" == *"Selection was cancelled by keystroke or right-click"* ]]; then
-					notify-send "dmenu-record: Error!" "Selection was cancelled by keystroke or right-click."
-					exit 1  # Stop if the cancellation message appears
-				elif [[ "$slop" =~ ^[0-9]+\ [0-9]+\ [0-9]+\ [0-9]+$ ]]; then
-					break
-				fi
-			done
+        "selection")
+            while true; do # so slop fails some times on kde so i just force it until it spits out a region or the user aborts
+                local slop=$(slop --highlight --color 0.3,0.4,0.6,0.4 -f "%x %y %w %h" 2>&1)  # Capture both stdout and stderr
+                if [[ "$slop" == *"Selection was cancelled by keystroke or right-click"* ]]; then
+                    notify-send "dmenu-record: Error!" "Selection was cancelled by keystroke or right-click."
+                    exit 1  # Stop if the cancellation message appears
+                elif [[ "$slop" =~ ^[0-9]+\ [0-9]+\ [0-9]+\ [0-9]+$ ]]; then
+                    break
+                fi
+            done
 
-			read -r X Y W H < <(echo $slop)
-			echo "-f x11grab -thread_queue_size 1024 -s "$W"x"$H" -i :0.0+"$X,$Y""
-		;;
-	esac
+            read -r X Y W H < <(echo $slop)
+            echo "-f x11grab -thread_queue_size 1024 -s "$W"x"$H" -i :0.0+"$X,$Y""
+        ;;
+    esac
 }
 
 print_audio() {
-	if [ "$record_mic" == "no" ] && [ "$record_desktop" == "no" ]; then return 0; fi
+    if [ "$record_mic" == "no" ] && [ "$record_desktop" == "no" ]; then return 0; fi
 
-	local settings=""
+    local settings=""
 
-	if [ "$record_mic" == "yes" ]; then
-		settings="-f pulse -thread_queue_size 1024 -i "$(get_pulse_source)" -ac 1 "
-	fi
+    if [ "$record_mic" == "yes" ]; then
+        settings="-f pulse -thread_queue_size 1024 -i "$(get_pulse_source)" -ac 1 "
+    fi
 
-	if [ "$record_desktop" == "yes" ]; then
-		settings+="-f pulse -thread_queue_size 1024 -i "$(get_pulse_sink)" -ac 2"
-	fi
+    if [ "$record_desktop" == "yes" ]; then
+        settings+="-f pulse -thread_queue_size 1024 -i "$(get_pulse_sink)" -ac 2"
+    fi
 
-	echo "$settings"
+    echo "$settings"
 }
 
 get_pulse_sink() {
-	echo ""$(pactl get-default-sink)".monitor" # seems always be something.monitor
+    echo ""$(pactl get-default-sink)".monitor" # seems always be something.monitor
 }
 
 get_pulse_source() {
-	echo ""$(pactl get-default-source)".monitor"
+    echo ""$(pactl get-default-source)".monitor"
 }
 
 print_maps() {
-	local settings=""
-	local screen_num="$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*' | wc -l)"
+    local settings=""
+    local screen_num="$(xrandr | grep -o '[0-9]*x[0-9]*[+-][0-9]*[+-][0-9]*' | wc -l)"
 
-	if [ "$split_monitors" == "yes" ]; then
-		for i in $(seq 0 $(( $screen_num - 1 )) ); do
-			settings+="-map ${i}:v:0 -r ${fps} -metadata:s:v:${i} title=Screen_${i} "
-		done
-	else
-		settings+="-map 0:v -r ${fps} "
-		screen_num=1 # reset back to 1 if no split monitors, maybe make another variable for this?
-	fi
+    if [ "$split_monitors" == "yes" ]; then
+        for i in $(seq 0 $(( $screen_num - 1 )) ); do
+            settings+="-map ${i}:v:0 -r ${fps} -metadata:s:v:${i} title=Screen_${i} "
+        done
+    else
+        settings+="-map 0:v -r ${fps} "
+        screen_num=1 # reset back to 1 if no split monitors, maybe make another variable for this?
+    fi
 
-	if [ "$split_audio_tracks" == "yes" ]; then
-		settings+="-map $(( $screen_num - 1 + 1 )):a -map $(( $screen_num - 1 + 2 )):a -metadata:s:a:0 title=Microphone -metadata:s:a:1 title=Desktop"
-	else
-		if [ "$record_mic" == "yes" ] && [ "$record_desktop" == "yes" ]; then
-			settings+="-filter_complex amix=inputs=2"
-		elif [ "$record_mic" == "yes" ] || [ "$record_desktop" == "yes" ]; then
-			settings+="-map $(( $screen_num - 1 + 1 )):a"
-		fi
-	fi
+    if [ "$split_audio_tracks" == "yes" ]; then
+        settings+="-map $(( $screen_num - 1 + 1 )):a -map $(( $screen_num - 1 + 2 )):a -metadata:s:a:0 title=Microphone -metadata:s:a:1 title=Desktop"
+    else
+        if [ "$record_mic" == "yes" ] && [ "$record_desktop" == "yes" ]; then
+            settings+="-filter_complex amix=inputs=2"
+        elif [ "$record_mic" == "yes" ] || [ "$record_desktop" == "yes" ]; then
+            settings+="-map $(( $screen_num - 1 + 1 )):a"
+        fi
+    fi
 
-	echo "$settings"
+    echo "$settings"
 }
 
 generate_file_name() {
-	# todo: should improve this later
+    # todo: should improve this later
 
-	local filename="$foldersub"
+    local filename="$foldersub"
 
-	if [ "$record_what" == "monitor" ]; then
-		filename+="/${datetime}___monitor.mkv"
-	elif [ "$record_what" == "workspace" ]; then
-		filename+="/${datetime}___workspace.mkv"
-	elif [ "$record_what" == "selection" ]; then
-		filename+="/${datetime}___selection.mkv"
-	fi
+    if [ "$record_what" == "monitor" ]; then
+        filename+="/${datetime}___monitor.mkv"
+    elif [ "$record_what" == "workspace" ]; then
+        filename+="/${datetime}___workspace.mkv"
+    elif [ "$record_what" == "selection" ]; then
+        filename+="/${datetime}___selection.mkv"
+    fi
 
-	echo "$filename"
+    echo "$filename"
 }
 
 print_args() {
-	local args="-y $(print_size) $(print_audio) $(print_maps) $video_settings $audio_settings $(generate_file_name)"
-	
-	echo "$args"
+    local args="-y $(print_size) $(print_audio) $(print_maps) $video_settings $audio_settings $(generate_file_name)"
+    
+    echo "$args"
 }
 
 ffmpeg_record() {
-	ffmpeg $(print_args) &
+    ffmpeg $(print_args) &
 
-	if [ ! $? == 0 ]; then
-		notify-send "dmenu-record: Error" "Something went wrong... Exiting"
-	fi
-	
-	echo $! > "/tmp/dmenu-record.pid"
+    if [ ! $? == 0 ]; then
+        notify-send "dmenu-record: Error" "Something went wrong... Exiting"
+    fi
+    
+    echo $! > "/tmp/dmenu-record.pid"
 }
 
 ask_recording() {
-	dmenu_ask
-	ffmpeg_record
+    dmenu_ask
+    ffmpeg_record
 }
 
 kill_recording() {
-	kill -15 "$(cat "/tmp/dmenu-record.pid")"
-	rm -f "/tmp/dmenu-record.pid"
+    kill -15 "$(cat "/tmp/dmenu-record.pid")"
+    rm -f "/tmp/dmenu-record.pid"
 }
 
 ask_to_end() {
-	local response=$(printf "no\\nyes" | $dmenu "end recording:") && \
-	[ "$response" = "yes" ] && kill_recording
+    local response=$(printf "no\\nyes" | $dmenu "end recording:") && \
+    [ "$response" = "yes" ] && kill_recording
 }
 
 send_notification_begin() {
-	notify-send "Started Screencasting!" "The file will be saved at ${foldersub}!"
+    notify-send "Started Screencasting!" "The file will be saved at ${foldersub}!"
 }
 
 send_notification_end() {
-	notify-send "Finished Screencasting!" "The file was saved to your disk at ${foldersub}!"
+    notify-send "Finished Screencasting!" "The file was saved to your disk at ${foldersub}!"
 }
 
 main() {
-	if [ "$1" == "--print" ]; then
-		dmenu_ask
-		echo "ffmpeg $(print_args)"
-		exit 0
-	fi
+    if [ "$1" == "--print" ]; then
+        dmenu_ask
+        echo "ffmpeg $(print_args)"
+        exit 0
+    fi
 
-	if [ -f "/tmp/dmenu-record.pid" ] && ! ps -p "$(cat "/tmp/dmenu-record.pid")" > /dev/null; then
-		notify-send "dmenu-record: Error" "Cannot find PID; Cleaned. Try running the script again!"
-		rm /tmp/dmenu-record.pid
-		ask_recording && send_notification_begin
-		exit 0
-	fi
+    if [ -f "/tmp/dmenu-record.pid" ] && ! ps -p "$(cat "/tmp/dmenu-record.pid")" > /dev/null; then
+        notify-send "dmenu-record: Error" "Cannot find PID; Cleaned. Try running the script again!"
+        rm /tmp/dmenu-record.pid
+        ask_recording && send_notification_begin
+        exit 0
+    fi
 
-	if [ -f "/tmp/dmenu-record.pid" ]; then
-		ask_to_end && \
-		send_notification_end && \
-		exit 0
-	else
-		ask_recording && send_notification_begin
-	fi
+    if [ -f "/tmp/dmenu-record.pid" ]; then
+        ask_to_end && \
+        send_notification_end && \
+        exit 0
+    else
+        ask_recording && send_notification_begin
+    fi
 }
 
 main "$@"

@@ -17,56 +17,56 @@ foldersub="$folder/$sub"
 
 
 ask_to_end() {
-	local response=$(printf "no\\nyes" | $dmenu "end recording:") && \
-	[ "$response" = "yes" ] && kill_recording
+    local response=$(printf "no\\nyes" | $dmenu "end recording:") && \
+    [ "$response" = "yes" ] && kill_recording
 }
 
 send_notification_begin() {
-	notify-send "Started Recording!" "The file will be saved at ${foldersub}!"
+    notify-send "Started Recording!" "The file will be saved at ${foldersub}!"
 }
 
 send_notification_end() {
-	notify-send "Finished Recording!" "The file was saved to your disk at ${foldersub}!"
+    notify-send "Finished Recording!" "The file was saved to your disk at ${foldersub}!"
 }
 
 dmenu_ask() {
-	local response=$(printf "yes\\nno" | $dmenu "start recording:") && \
-	[ "$response" = "yes" ] && ffmpeg_record
+    local response=$(printf "yes\\nno" | $dmenu "start recording:") && \
+    [ "$response" = "yes" ] && ffmpeg_record
 }
 
 ffmpeg_record() {
-	local filename="$foldersub/${datetime}_audio.m4a"
+    local filename="$foldersub/${datetime}_audio.m4a"
     local args="-y -f pulse -thread_queue_size 1024 -i $(get_pulse_source) -ac 1 $audio_settings $filename"
 
-	ffmpeg $args &
+    ffmpeg $args &
 
-	echo $! > "/tmp/dmenu-dictaphone.pid"
+    echo $! > "/tmp/dmenu-dictaphone.pid"
 }
 
 get_pulse_source() {
-	echo ""$(pactl get-default-source)".monitor"
+    echo ""$(pactl get-default-source)".monitor"
 }
 
 kill_recording() {
-	kill -15 "$(cat "/tmp/dmenu-dictaphone.pid")"
-	rm -f "/tmp/dmenu-dictaphone.pid"
+    kill -15 "$(cat "/tmp/dmenu-dictaphone.pid")"
+    rm -f "/tmp/dmenu-dictaphone.pid"
 }
 
 main() {
-	if [ -f "/tmp/dmenu-dictaphone.pid" ] && ! ps -p "$(cat "/tmp/dmenu-dictaphone.pid")" > /dev/null; then
-		notify-send "dmenu-dictaphone: Error" "Cannot find PID; Cleaned. Try running the script again!"
-		rm /tmp/dmenu-dictaphone.pid
-		dmenu_ask && send_notification_begin
-		exit 0
-	fi
+    if [ -f "/tmp/dmenu-dictaphone.pid" ] && ! ps -p "$(cat "/tmp/dmenu-dictaphone.pid")" > /dev/null; then
+        notify-send "dmenu-dictaphone: Error" "Cannot find PID; Cleaned. Try running the script again!"
+        rm /tmp/dmenu-dictaphone.pid
+        dmenu_ask && send_notification_begin
+        exit 0
+    fi
 
-	if [ -f "/tmp/dmenu-dictaphone.pid" ]; then
-		ask_to_end && \
-		send_notification_end && \
-		exit 0
-	else
-		dmenu_ask && send_notification_begin
-	fi
+    if [ -f "/tmp/dmenu-dictaphone.pid" ]; then
+        ask_to_end && \
+        send_notification_end && \
+        exit 0
+    else
+        dmenu_ask && send_notification_begin
+    fi
 }
 
 main
