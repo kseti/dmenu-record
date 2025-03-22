@@ -75,7 +75,7 @@ print_size() { # https://gist.github.com/naelstrof/f9b74b5221cdc324c0911c89a47b8
                         if (( ${YMOUSE} >= ${MONY} )); then
                             if (( ${YMOUSE} <= ${MONY}+${MONH} )); then
                                 # We have found our monitor!
-                                echo "-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
+                                echo "-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -r ${fps} -i :0.0+"${MONX},${MONY}" "
                                 return 0
                             fi
                         fi
@@ -87,7 +87,7 @@ print_size() { # https://gist.github.com/naelstrof/f9b74b5221cdc324c0911c89a47b8
 
         "workspace")
             if [ "$split_monitors" == "no" ]; then
-                echo "-f x11grab -thread_queue_size 1024 -s "$(xrandr | grep -oP '(?<=current ).*(?=,)' | tr -d ' ')" -i "$DISPLAY" "
+                echo "-f x11grab -thread_queue_size 1024 -s "$(xrandr | grep -oP '(?<=current ).*(?=,)' | tr -d ' ')" -r ${fps} -i "$DISPLAY" "
             else
                 local output=""
 
@@ -101,7 +101,7 @@ print_size() { # https://gist.github.com/naelstrof/f9b74b5221cdc324c0911c89a47b8
                     MONY=$(echo ${mon} | awk -F "[x+]" '{print $4}')
                     
                     # Append monitors to the output
-                    output+="-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -i :0.0+"${MONX},${MONY}" "
+                    output+="-f x11grab -thread_queue_size 1024 -s "${MONW}x${MONH}" -r ${fps} -i :0.0+"${MONX},${MONY}" "
                 done
 
                 echo -e "$output"
@@ -120,33 +120,37 @@ print_size() { # https://gist.github.com/naelstrof/f9b74b5221cdc324c0911c89a47b8
             done
 
             read -r X Y W H < <(echo $slop)
-            echo "-f x11grab -thread_queue_size 1024 -s "$W"x"$H" -i :0.0+"$X,$Y""
+            echo "-f x11grab -thread_queue_size 1024 -s "$W"x"$H" -r ${fps} -i :0.0+"$X,$Y""
         ;;
     esac
 }
 
 print_audio() {
-    if [ "$record_mic" == "no" ] && [ "$record_desktop" == "no" ]; then return 0; fi
-
     local settings=""
 
+    if [ "$record_mic" == "no" ] && [ "$record_desktop" == "no" ]; then
+        return 0;
+    fi
+
     if [ "$record_mic" == "yes" ]; then
-        settings="-f pulse -thread_queue_size 1024 -i "$(get_pulse_source)" -ac 1 "
+        settings+="-f pulse -thread_queue_size 1024 -i "$(get_pulse_source)" -ac 1 "
     fi
 
     if [ "$record_desktop" == "yes" ]; then
-        settings+="-f pulse -thread_queue_size 1024 -i "$(get_pulse_sink)" -ac 2"
+        settings+="-f pulse -thread_queue_size 1024 -i "$(get_pulse_sink)" -ac 2 "
     fi
 
-    echo "$settings"
+    echo "$settings ${audio_settings}"
 }
 
 get_pulse_sink() {
-    echo ""$(pactl get-default-sink)".monitor" # seems always be something.monitor
+    echo "$(pactl get-default-sink).monitor" # seems always be something.monitor
+    #echo "$(wpctl inspect @DEFAULT_AUDIO_SINK@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
 }
 
 get_pulse_source() {
-    echo ""$(pactl get-default-source)".monitor"
+    echo "$(pactl get-default-source).monitor"
+    #echo "$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
 }
 
 print_maps() {
@@ -155,10 +159,10 @@ print_maps() {
 
     if [ "$split_monitors" == "yes" ]; then
         for i in $(seq 0 $(( $screen_num - 1 )) ); do
-            settings+="-map ${i}:v:0 -r ${fps} -metadata:s:v:${i} title=Screen_${i} "
+            settings+="-map ${i}:v:0 -metadata:s:v:${i} title=Screen_${i} "
         done
     else
-        settings+="-map 0:v -r ${fps} "
+        settings+="-map 0:v "
         screen_num=1 # reset back to 1 if no split monitors, maybe make another variable for this?
     fi
 
@@ -189,10 +193,10 @@ generate_file_name() {
     fi
 
     echo "$filename"
-}
+} 
 
 print_args() {
-    local args="-y $(print_size) $(print_audio) $(print_maps) $video_settings $audio_settings $(generate_file_name)"
+    local args="-y $(print_size) $(print_audio) $(print_maps) ${video_settings} $(generate_file_name)"
     
     echo "$args"
 }
