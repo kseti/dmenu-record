@@ -202,7 +202,7 @@ generate_file_name() {
 print_args() {
     local args="-y $(print_size) $(print_audio) $(print_maps) ${video_settings} $(generate_file_name)"
     
-    echo "$args"
+    echo "$args" | sed 's/  */ /g'
 }
 
 ffmpeg_record() {

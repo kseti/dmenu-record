@@ -40,7 +40,7 @@ print_args() {
     local filename="$foldersub/${datetime}_audio.m4a"
     local args="-y -f pulse -thread_queue_size 1024 -i $(get_pulse_source) -ac 1 $audio_settings $filename"
 
-    echo "$args"
+    echo "$args" | sed 's/  */ /g'
 }
 
 ffmpeg_record() {
