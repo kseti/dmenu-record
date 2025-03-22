@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 
 # config
 folder=${DMENU_DICTAPHONE_FOLDER:-~/Dictaphone}
@@ -30,15 +30,21 @@ send_notification_end() {
 }
 
 dmenu_ask() {
-    local response=$(printf "yes\\nno" | $dmenu "start recording:") && \
-    [ "$response" = "yes" ] && ffmpeg_record
+    local response=$(printf "yes\\nno" | $dmenu "start recording:")
+    if ! [ "$response" = "yes" ]; then
+        exit 0
+    fi
 }
 
-ffmpeg_record() {
+print_args() {
     local filename="$foldersub/${datetime}_audio.m4a"
     local args="-y -f pulse -thread_queue_size 1024 -i $(get_pulse_source) -ac 1 $audio_settings $filename"
 
-    ffmpeg $args &
+    echo "$args"
+}
+
+ffmpeg_record() {
+    ffmpeg $(print_args) &
 
     echo $! > "/tmp/dmenu-dictaphone.pid"
 }
@@ -52,11 +58,22 @@ kill_recording() {
     rm -f "/tmp/dmenu-dictaphone.pid"
 }
 
+ask_recording() {
+    dmenu_ask
+    ffmpeg_record
+}
+
 main() {
+    if [ "$1" == "--print" ]; then
+        dmenu_ask
+        echo "ffmpeg $(print_args)"
+        exit 0
+    fi
+
     if [ -f "/tmp/dmenu-dictaphone.pid" ] && ! ps -p "$(cat "/tmp/dmenu-dictaphone.pid")" > /dev/null; then
         notify-send "dmenu-dictaphone: Error" "Cannot find PID; Cleaned. Try running the script again!"
         rm /tmp/dmenu-dictaphone.pid
-        dmenu_ask && send_notification_begin
+        ask_recording && send_notification_begin
         exit 0
     fi
 
@@ -65,8 +82,8 @@ main() {
         send_notification_end && \
         exit 0
     else
-        dmenu_ask && send_notification_begin
+        ask_recording && send_notification_begin
     fi
 }
 
-main
+main "$@"
