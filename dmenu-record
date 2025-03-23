@@ -29,8 +29,8 @@ dmenu_ask() {
     fi
 
     menu_fps=$(printf "default\\n144\\n60\\n30\\n25\\n12" | $dmenu "framerate:")
-    demenu_verify "$menu_fps" "default 144 60 30 25 12"
-    [ "$menu_fps" -ne "default" ] && fps=$menu_fps
+    dmenu_verify "$menu_fps" "default 144 60 30 25 12"
+    [ "$menu_fps" != "default" ] && fps=$menu_fps
     
     record_mic=$(printf "yes\\nno" | $dmenu "record mic:")
     dmenu_verify "$record_mic" "yes no"
