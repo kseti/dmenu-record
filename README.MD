@@ -1,8 +1,6 @@
 # dmenu-record
 
 Screencast on Xorg with FFmpeg with cool options using any dmenu-compatible menu.
-I have also included a dictaphone (voice notes) which is almost the exact thing,
-but the default variables are different.
 
 ## Features
 
