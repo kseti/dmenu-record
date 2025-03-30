@@ -14,7 +14,7 @@ audio_settings=${DMENU_RECORD_AUDIO_SETTINGS:-"-c:a libopus -b:a 320k"}
 video_settings=${DMENU_RECORD_VIDEO_SETTINGS:-"-c:v libx264 -crf 18 -preset fast"}
 
 # useful variables
-datetime="$(date +%Y-%m-%d_%H-%M-%S.%3N)"
+datetime="$(date +%Y-%m-%d_%H-%M-%S)"
 foldersub="$folder/$sub"
 
 # creates the year subfolder if not exist
@@ -207,7 +207,9 @@ ffmpeg_record() {
         notify-send "dmenu-record: Error" "Something went wrong... Exiting"
     fi
     
-    echo $! > "/tmp/dmenu-record.pid"
+    # needs to wait a bit or else pgrep won't print anything...
+    sleep 2
+    pgrep -af "ffmpeg.*x11grab.*$datetime" | grep -v "$terminal" | awk '{ print $1 }' > "/tmp/dmenu-record.pid"
 }
 
 ask_recording() {
