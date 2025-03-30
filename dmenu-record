@@ -7,9 +7,10 @@ folder=${DMENU_RECORD_FOLDER:-~/Screencasts}
 sub=${DMENU_RECORD_SUB:-"$(date +%Y)"}
 
 # config: ffmpeg settings
+terminal=${DMENU_RECORD_TERMINAL:-""}
 fps=${DMENU_RECORD_FPS:-60}
 dmenu=${DMENU_RECORD_DMENU:-"dmenu -i -p"}
-audio_settings=${DMENU_RECORD_AUDIO_SETTINGS:-"-c:a aac -b:a 320k"}
+audio_settings=${DMENU_RECORD_AUDIO_SETTINGS:-"-c:a libopus -b:a 320k"}
 video_settings=${DMENU_RECORD_VIDEO_SETTINGS:-"-c:v libx264 -crf 18 -preset fast"}
 
 # useful variables
@@ -148,13 +149,12 @@ print_audio() {
 }
 
 get_pulse_sink() {
-    echo "$(pactl get-default-sink).monitor" # seems always be something.monitor
-    #echo "$(wpctl inspect @DEFAULT_AUDIO_SINK@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
+    # seems always be something.monitor
+    echo "$(wpctl inspect @DEFAULT_AUDIO_SINK@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
 }
 
 get_pulse_source() {
-    echo "$(pactl get-default-source).monitor"
-    #echo "$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
+    echo "$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2> /dev/null | grep node.name | awk -F '"' '{print $2}').monitor"
 }
 
 print_maps() {
@@ -184,17 +184,7 @@ print_maps() {
 }
 
 generate_file_name() {
-    # todo: should improve this later
-
-    local filename="$foldersub"
-
-    if [ "$record_what" == "monitor" ]; then
-        filename+="/${datetime}___monitor.mkv"
-    elif [ "$record_what" == "workspace" ]; then
-        filename+="/${datetime}___workspace.mkv"
-    elif [ "$record_what" == "selection" ]; then
-        filename+="/${datetime}___selection.mkv"
-    fi
+    local filename="$foldersub/${datetime}___"$record_what".mkv"
 
     echo "$filename"
 } 
@@ -206,7 +196,12 @@ print_args() {
 }
 
 ffmpeg_record() {
-    ffmpeg $(print_args) &
+    if [ -z "$terminal" ]; then
+        ffmpeg $(print_args) &
+    else
+        # if $terminal is set, spawn a terminal to run ffmpeg isntead of running it on the background
+        "$terminal" -e ffmpeg $(print_args) &
+    fi
 
     if [ ! $? == 0 ]; then
         notify-send "dmenu-record: Error" "Something went wrong... Exiting"
@@ -245,7 +240,7 @@ main() {
         exit 0
     fi
 
-    if [ -f "/tmp/dmenu-record.pid" ] && ! ps -p "$(cat "/tmp/dmenu-record.pid")" > /dev/null; then
+    if [ -f "/tmp/dmenu-record.pid" ] && ! ps -p "$(cat "/tmp/dmenu-record.pid")" > /dev/null 2>&1; then
         notify-send "dmenu-record: Error" "Cannot find PID; Cleaned. Try running the script again!"
         rm /tmp/dmenu-record.pid
         ask_recording && send_notification_begin
