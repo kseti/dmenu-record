@@ -24,8 +24,8 @@ but the default variables are different.
 - xrandr
 - xdotool
 - slop
-- pulseaudio (or pipewire-pulse)
-- pactl
+- pipewire and pipewire-pulse
+- wireplumber
 - a notification daemon
 
 ## Examples
